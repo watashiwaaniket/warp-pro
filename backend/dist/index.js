@@ -20,11 +20,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const ollama_1 = __importDefault(require("ollama"));
+const prompts_1 = require("./prompts");
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, e_1, _b, _c;
-        const message = { role: 'user', content: 'Why is the sky blue?' };
-        const response = yield ollama_1.default.chat({ model: 'codellama:7b', messages: [message], stream: true });
+        const systemMessage = {
+            role: 'system',
+            content: (0, prompts_1.getSystemPrompt)()
+        };
+        const basePrompt = {
+            role: 'user',
+            content: prompts_1.BASE_PROMPT
+        };
+        const userMessage = {
+            role: 'user',
+            content: 'help me generate a simple todo app?'
+        };
+        const response = yield ollama_1.default.chat({
+            model: 'codellama:7b',
+            messages: [systemMessage, basePrompt, userMessage],
+            stream: true,
+        });
         try {
             for (var _d = true, response_1 = __asyncValues(response), response_1_1; response_1_1 = yield response_1.next(), _a = response_1_1.done, !_a; _d = true) {
                 _c = response_1_1.value;
