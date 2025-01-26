@@ -34,10 +34,10 @@ function main() {
         };
         const userMessage = {
             role: 'user',
-            content: 'help me generate a simple todo app?'
+            content: 'create a simple todo app in nextjs'
         };
         const response = yield ollama_1.default.chat({
-            model: 'codellama:7b',
+            model: 'deepseek-r1:7b',
             messages: [systemMessage, basePrompt, userMessage],
             stream: true,
         });
