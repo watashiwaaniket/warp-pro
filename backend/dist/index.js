@@ -20,24 +20,58 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const ollama_1 = __importDefault(require("ollama"));
+const express_1 = __importDefault(require("express"));
 const prompts_1 = require("./prompts");
+const react_1 = require("./defaults/react");
+const app = (0, express_1.default)();
+app.use(express_1.default.json());
+const model = 'deepseek-r1:7b';
+const systemMessage = {
+    role: 'system',
+    content: (0, prompts_1.getSystemPrompt)()
+};
+const basePrompt = {
+    role: 'user',
+    content: prompts_1.BASE_PROMPT
+};
+const userMessage = {
+    role: 'user',
+    content: 'create a simple todo app in nextjs'
+};
+app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const prompt = req.body.prompt;
+    const response = yield ollama_1.default.chat({
+        model: 'mistral:latest',
+        messages: [{ role: 'user', content: `prompt -> ${prompt}` },
+            {
+                role: 'user',
+                content: 'Given the prompt, return either react or node based on what you think the project should be. Only return a single word either "node" or "react". IMPORTANT: Use only one word response no braces, no special characters, no anything, just the two defined words.',
+            },],
+    });
+    const answer = yield response.message.content;
+    if (answer.trim() == "React") {
+        res.json({
+            prompts: [react_1.reactBasePrompt, systemMessage, basePrompt, userMessage]
+        });
+        return;
+    }
+    if (answer.trim() == "Node") {
+        res.json({
+            prompts: [systemMessage, basePrompt, userMessage]
+        });
+        return;
+    }
+    // res.status(403).json({
+    //     message: "You cannot access this!"
+    // })
+    res.json(answer.trim());
+    return;
+}));
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, e_1, _b, _c;
-        const systemMessage = {
-            role: 'system',
-            content: (0, prompts_1.getSystemPrompt)()
-        };
-        const basePrompt = {
-            role: 'user',
-            content: prompts_1.BASE_PROMPT
-        };
-        const userMessage = {
-            role: 'user',
-            content: 'create a simple todo app in nextjs'
-        };
         const response = yield ollama_1.default.chat({
-            model: 'deepseek-r1:7b',
+            model: model,
             messages: [systemMessage, basePrompt, userMessage],
             stream: true,
         });
@@ -58,4 +92,7 @@ function main() {
         }
     });
 }
-main();
+// main()
+app.listen(3000, () => {
+    console.log('Server listening on port 3000');
+});
