@@ -38,7 +38,7 @@ app.post('/template',async (req, res) => {
 
     if(answer.trim() == "React"){
         res.json({
-            prompts: [reactBasePrompt, systemMessage, basePrompt, userMessage]
+            prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`, systemMessage, basePrompt, userMessage]
         })
         return;
     }
@@ -55,19 +55,31 @@ app.post('/template',async (req, res) => {
     return;
 })
 
-async function main() {    
+app.post('/chat', async (req, res) => {
+    const messages = req.body.messages;
     const response = await ollama.chat(
         { 
             model: model, 
-            messages: [systemMessage, basePrompt, userMessage],
-            stream: true, 
-        })
-    for await (const part of response) {
-    process.stdout.write(part.message.content)
-    }
-    
-}
+            messages: messages,
+            // stream: true, 
+        }
+    )
+    console.log(response.message.content);
+    res.json({});
+})
 
+// async function main() {    
+//     const response = await ollama.chat(
+//         { 
+//             model: model, 
+//             messages: [systemMessage, basePrompt, userMessage],
+//             stream: true, 
+//         })
+//     for await (const part of response) {
+//     process.stdout.write(part.message.content)
+//     }
+    
+// }
 // main()
 app.listen(3000, () => {
     console.log('Server listening on port 3000')
