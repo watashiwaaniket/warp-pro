@@ -38,7 +38,8 @@ app.post('/template',async (req, res) => {
 
     if(answer.trim() == "React"){
         res.json({
-            prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`, systemMessage, basePrompt, userMessage]
+            prompts: [{role: "system",
+                content:`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`}, systemMessage, basePrompt, userMessage]
         })
         return;
     }
@@ -57,22 +58,40 @@ app.post('/template',async (req, res) => {
 
 app.post('/chat', async (req, res) => {
     const messages = req.body.messages;
-    const response = await ollama.chat(
-        { 
-            model: model, 
-            messages: messages,
-            // stream: true, 
+
+    // Set headers for streaming
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Transfer-Encoding", "chunked");
+    res.setHeader("Connection", "keep-alive");
+
+    try {
+        const response = await ollama.chat(
+            { 
+                model: model, 
+                messages: messages,
+                stream: true, 
+            }
+        );
+
+        for await (const part of response) {
+            const data = JSON.stringify({ message: part.message.content });
+            res.write(data + "\n"); // Send each chunk to the client
         }
-    )
-    console.log(response.message.content);
-    res.json({});
-})
+    } catch (error) {
+        console.error("Error:", error);
+        res.write(JSON.stringify({ error: "An error occurred while processing the request." }));
+    } finally {
+        res.end(); // End the streaming response
+    }
+});
+
 
 // async function main() {    
 //     const response = await ollama.chat(
 //         { 
 //             model: model, 
-//             messages: [systemMessage, basePrompt, userMessage],
+//             messages: [{role: "system",
+//                 content:`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`}, systemMessage, basePrompt, userMessage],
 //             stream: true, 
 //         })
 //     for await (const part of response) {
@@ -81,6 +100,6 @@ app.post('/chat', async (req, res) => {
     
 // }
 // main()
-app.listen(3000, () => {
-    console.log('Server listening on port 3000')
+app.listen(8080, () => {
+    console.log('Server listening on port 8080')
 })

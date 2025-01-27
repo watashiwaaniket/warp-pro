@@ -51,7 +51,8 @@ app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* 
     const answer = yield response.message.content;
     if (answer.trim() == "React") {
         res.json({
-            prompts: [react_1.reactBasePrompt, systemMessage, basePrompt, userMessage]
+            prompts: [{ role: "system",
+                    content: `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${react_1.reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n` }, systemMessage, basePrompt, userMessage]
         });
         return;
     }
@@ -61,18 +62,22 @@ app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         return;
     }
-    // res.status(403).json({
-    //     message: "You cannot access this!"
-    // })
-    res.json(answer.trim());
+    res.status(403).json({
+        message: "You cannot access this!"
+    });
     return;
 }));
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a, e_1, _b, _c;
+app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, e_1, _b, _c;
+    const messages = req.body.messages;
+    // Set headers for streaming
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Transfer-Encoding", "chunked");
+    res.setHeader("Connection", "keep-alive");
+    try {
         const response = yield ollama_1.default.chat({
             model: model,
-            messages: [systemMessage, basePrompt, userMessage],
+            messages: messages,
             stream: true,
         });
         try {
@@ -80,7 +85,8 @@ function main() {
                 _c = response_1_1.value;
                 _d = false;
                 const part = _c;
-                process.stdout.write(part.message.content);
+                const data = JSON.stringify({ message: part.message.content });
+                res.write(data + "\n"); // Send each chunk to the client
             }
         }
         catch (e_1_1) { e_1 = { error: e_1_1 }; }
@@ -90,9 +96,28 @@ function main() {
             }
             finally { if (e_1) throw e_1.error; }
         }
-    });
-}
+    }
+    catch (error) {
+        console.error("Error:", error);
+        res.write(JSON.stringify({ error: "An error occurred while processing the request." }));
+    }
+    finally {
+        res.end(); // End the streaming response
+    }
+}));
+// async function main() {    
+//     const response = await ollama.chat(
+//         { 
+//             model: model, 
+//             messages: [{role: "system",
+//                 content:`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`}, systemMessage, basePrompt, userMessage],
+//             stream: true, 
+//         })
+//     for await (const part of response) {
+//     process.stdout.write(part.message.content)
+//     }
+// }
 // main()
-app.listen(3000, () => {
-    console.log('Server listening on port 3000');
+app.listen(8080, () => {
+    console.log('Server listening on port 8080');
 });
